@@ -9,72 +9,97 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 import os
 
-camera_host_arg = DeclareLaunchArgument('camera_hostname', default_value='192.168.0.9')
-lidar_host_arg = DeclareLaunchArgument('lidar_hostname', default_value='192.168.0.10')
-imu_serial_arg = DeclareLaunchArgument('imu_serial_port', default_value='/dev/ttyUSB0')
+camera_host_arg = DeclareLaunchArgument("camera_hostname", default_value="192.168.0.9")
+lidar_host_arg = DeclareLaunchArgument("lidar_hostname", default_value="192.168.0.10")
 
-# not needed
-# gps_serial_arg = DeclareLaunchArgument('gps_port', default_value='/dev/ttyACM0')
 
 def routecam():
     return Node(
-        package='routecam_ros2',
-        executable='routecam',
-        name='routecam',
-        parameters=[
-            {"hostname": LaunchConfiguration("camera_hostname")}
-        ],
+        package="routecam_ros2",
+        executable="routecam",
+        name="routecam",
+        parameters=[{"hostname": LaunchConfiguration("camera_hostname")}],
         respawn=True,
     )
-    
-def imu():
-    return Node(
-        package='imu_driver',
-        executable='imu_driver_exe',
-        name='imu_driver_exe',
-        parameters=[
-            {"port_name": LaunchConfiguration("imu_serial_port")}
-        ],
-        respawn=True,
-        output="log",
-    )
-    
+
+
 def gps():
     return IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ublox_gps'), "launch/ublox_gps_node-launch.py")
+            os.path.join(get_package_share_directory("ublox_gps"), "launch/ublox_gps_node-launch.py")
         ),
     )
 
-def lidar():
+
+def ntrip():
     return IncludeLaunchDescription(
-        XMLLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ouster_ros'), "launch/sensor.launch.xml")
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory("ntrip_client"), "ntrip_client_launch.py")
         ),
-        launch_arguments = {
-            'sensor_hostname' : LaunchConfiguration("lidar_hostname"),
-            'attempt_reconnect' : "true",
-            'viz': "false",
-            'sensor_frame': "3d_lidar_link",
-            'lidar_frame': "3d_lidar_link",
-            'imu_frame': "3d_lidar_link",
-            'point_cloud_frame': "3d_lidar_link",
-            'pub_static_tf': "false",
-            'min_range': "0.3",
-            'max_range': "50.0",
-            'timestamp_mode': "TIME_FROM_ROS_TIME",
+        launch_arguments={
+            "host": "148.149.0.87",
+            "port": "10000",
+            "mountpoint": "NETWORK_SOLUTION_RTCM3-GG",
+            "authenticate": "true",
+            "username": "Actor",
+            "password": "igvcntrip2025",
         }.items(),
     )
 
+
+def lidar_driver():
+    return IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory("velodyne_driver"), "launch/velodyne_driver_node-VLP16-launch.py")
+        )
+    )
+
+
+def lidar():
+    return IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("velodyne_pointcloud"), "launch/velodyne_transform_node-VLP16-launch.py"
+            )
+        )
+    )
+
+
+def imu_9_axis_BNO085():
+    return IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory("imu_serial_to_ros_publisher"), "launch/imu_publisher.launch.py")
+        ),
+        launch_arguments={
+            "serial_port": "/dev/ttyBNO085",
+            "frame_id": "imu_link",
+            "topic": "/imu/BNO085_data",
+        }.items(),
+    )
+
+
+def rosboard():
+    return Node(
+        package="rosboard",
+        executable="rosboard_node",
+        name="rosboard_node",
+        respawn=True,
+        output="screen",
+    )
+
+
 def generate_launch_description():
-    
-    return LaunchDescription([
-        camera_host_arg,
-        lidar_host_arg, 
-        imu_serial_arg, 
-        routecam(),
-        imu(),
-        gps(),
-        lidar(),
-    ])
-    
+
+    return LaunchDescription(
+        [
+            camera_host_arg,
+            lidar_host_arg,
+            routecam(),
+            gps(),
+            ntrip(),
+            lidar_driver(),
+            lidar(),
+            imu_9_axis_BNO085(),
+            rosboard(),
+        ]
+    )

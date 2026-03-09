@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'rACTOR_pi_launches'
+package_name = 'ractor_pi_launches'
 
 setup(
     name=package_name,

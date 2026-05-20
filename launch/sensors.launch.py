@@ -9,19 +9,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 import os
 
-camera_host_arg = DeclareLaunchArgument("camera_hostname", default_value="192.168.0.9")
-lidar_host_arg = DeclareLaunchArgument("lidar_hostname", default_value="192.168.0.10")
-
-
-def routecam():
-    return Node(
-        package="routecam_ros2",
-        executable="routecam",
-        name="routecam",
-        parameters=[{"hostname": LaunchConfiguration("camera_hostname")}],
-        respawn=True,
-    )
-
 
 def gps():
     return IncludeLaunchDescription(
@@ -63,17 +50,17 @@ def lidar():
             )
         )
     )
+    
 
-
-def imu_9_axis_BNO085():
+def imu_6_axis_LSM6DSOX():
     return IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory("imu_serial_to_ros_publisher"), "launch/imu_publisher.launch.py")
         ),
         launch_arguments={
-            "serial_port": "/dev/ttyBNO085",
+            "serial_port": "/dev/tty_LSM6DSOX",
             "frame_id": "imu_link",
-            "topic": "/imu/BNO085_data",
+            "topic": "/imu/LSM6DSOX_data",
         }.items(),
     )
 
@@ -92,14 +79,11 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            camera_host_arg,
-            lidar_host_arg,
-            routecam(),
-            gps(),
-            ntrip(),
+            # gps(),
+            # ntrip(),
             lidar_driver(),
             lidar(),
-            imu_9_axis_BNO085(),
+            imu_6_axis_LSM6DSOX(),
             rosboard(),
         ]
     )
